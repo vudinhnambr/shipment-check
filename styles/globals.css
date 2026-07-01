@@ -96,22 +96,6 @@ h1 {
   min-width: 0;
 }
 
-.suffix-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.suffix-row input {
-  flex: 1;
-  min-width: 140px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 15px;
-}
-
 textarea {
   width: 100%;
   min-height: 90px;

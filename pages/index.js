@@ -33,7 +33,6 @@ export default function Home() {
   const [parts, setParts] = useState([]);
   const [partsError, setPartsError] = useState(null);
   const [selectedPart, setSelectedPart] = useState("");
-  const [suffix, setSuffix] = useState("");
 
   useEffect(() => {
     fetch("/api/parts")
@@ -48,16 +47,14 @@ export default function Home() {
   // A "bare fragment" is a short line with no dashes and no "*" already in it -
   // i.e. it looks like just the last few digits of an S/N, not a full S/N (which
   // always contains dashes, e.g. "VN-GEE-P280027B-262239"). If a Part is ticked,
-  // any bare fragment - whether typed in the dedicated suffix box OR directly into
-  // the main textarea - gets scoped to that part automatically.
+  // any bare fragment typed into the textarea gets scoped to that part
+  // automatically - no separate "add" step needed.
   function isBareFragment(line) {
     return !line.includes("*") && !line.includes("-") && line.length <= 10;
   }
 
-  // Builds the final text to search: every line already in the textarea (with bare
-  // fragments auto-scoped to the ticked Part, if any), PLUS the current suffix box
-  // content (if filled in) - so the inspector does not have to remember which box
-  // to type numbers into, or click "Them vao danh sach" before "Kiem tra" works.
+  // Builds the final text to search: every line in the textarea, with bare
+  // fragments auto-scoped to the ticked Part (if any).
   function buildQueryText() {
     let lines = snText
       .split(/\n+/)
@@ -68,11 +65,6 @@ export default function Home() {
       lines = lines.map((l) => (isBareFragment(l) ? `${selectedPart}*${l}` : l));
     }
 
-    if (selectedPart && suffix.trim()) {
-      lines.push(`${selectedPart}*${suffix.trim()}`);
-      setSuffix("");
-    }
-
     const text = lines.join("\n");
     setSnText(text);
     return text;
@@ -81,7 +73,7 @@ export default function Home() {
   async function runCheck(refresh = false) {
     const text = buildQueryText();
     if (!text) {
-      setError("Chua nhap S/N nao - go vao o ben duoi hoac chon Part + so cuoi.");
+      setError("Chua nhap S/N nao - go vao o ben duoi (co the chon Part truoc de go it so hon).");
       return;
     }
     setLoading(true);
@@ -109,13 +101,6 @@ export default function Home() {
     setSnText(candidate);
   }
 
-  function addPartQuery() {
-    if (!selectedPart || !suffix.trim()) return;
-    const line = `${selectedPart}*${suffix.trim()}`;
-    setSnText((prev) => (prev ? prev.trim() + "\n" + line : line));
-    setSuffix("");
-  }
-
   function togglePart(code) {
     setSelectedPart((prev) => (prev === code ? "" : code));
   }
@@ -125,8 +110,8 @@ export default function Home() {
       <h1>Kiem tra NCR ring le truoc khi xuat hang</h1>
       <p className="subtitle">
         Nhap S/N cua Bearing Set (doc tu Tag Name), moi so mot dong. Hoac tick chon
-        Part ben trai roi go 6-8 so cuoi cua S/N, bam Kiem tra (hoac Enter) - khong
-        can nho ma day.
+        Part ben trai, roi chi can go 6-8 so cuoi cua S/N vao o ben duoi - khong can
+        nho ma day.
       </p>
 
       <div className="layout">
@@ -156,26 +141,6 @@ export default function Home() {
         </div>
 
         <div className="main-content">
-          <div className="suffix-row">
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="6-8 so cuoi cua S/N"
-              value={suffix}
-              onChange={(e) => setSuffix(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") runCheck(false);
-              }}
-            />
-            <button
-              className="secondary"
-              onClick={addPartQuery}
-              disabled={!selectedPart || !suffix.trim()}
-            >
-              Them vao danh sach
-            </button>
-          </div>
-
           <textarea
             value={snText}
             onChange={(e) => setSnText(e.target.value)}
