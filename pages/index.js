@@ -45,14 +45,34 @@ export default function Home() {
       .catch((e) => setPartsError(e.message));
   }, []);
 
+  // Builds the final text to search: whatever is already in the textarea, PLUS
+  // the current Part + suffix box (if both filled in) - so the inspector does not
+  // have to remember to click "Them vao danh sach" before "Kiem tra" works. Also
+  // updates the textarea + clears the suffix box so it's clear what was searched.
+  function buildQueryText() {
+    let text = snText.trim();
+    if (selectedPart && suffix.trim()) {
+      const line = `${selectedPart}*${suffix.trim()}`;
+      text = text ? text + "\n" + line : line;
+      setSnText(text);
+      setSuffix("");
+    }
+    return text;
+  }
+
   async function runCheck(refresh = false) {
+    const text = buildQueryText();
+    if (!text) {
+      setError("Chua nhap S/N nao - go vao o ben duoi hoac chon Part + so cuoi.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sn: snText, refresh }),
+        body: JSON.stringify({ sn: text, refresh }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -78,128 +98,156 @@ export default function Home() {
     setSuffix("");
   }
 
+  function togglePart(code) {
+    setSelectedPart((prev) => (prev === code ? "" : code));
+  }
+
   return (
     <div className="container">
       <h1>Kiem tra NCR ring le truoc khi xuat hang</h1>
       <p className="subtitle">
-        Nhap S/N cua Bearing Set (doc tu Tag Name), moi so mot dong. Hoac chon Part
-        roi go 6-8 so cuoi cua S/N - khong can nho ma day.
+        Nhap S/N cua Bearing Set (doc tu Tag Name), moi so mot dong. Hoac tick chon
+        Part ben trai roi go 6-8 so cuoi cua S/N, bam Kiem tra (hoac Enter) - khong
+        can nho ma day.
       </p>
 
-      <div className="part-picker">
-        <select value={selectedPart} onChange={(e) => setSelectedPart(e.target.value)}>
-          <option value="">-- Chon Part --</option>
-          {parts.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.label}
-              {p.client ? ` (${p.client})` : ""}
-            </option>
-          ))}
-        </select>
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="6-8 so cuoi cua S/N"
-          value={suffix}
-          onChange={(e) => setSuffix(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") addPartQuery();
-          }}
-        />
-        <button className="secondary" onClick={addPartQuery} disabled={!selectedPart || !suffix.trim()}>
-          Them vao danh sach
-        </button>
-      </div>
-      {partsError && <div className="error small">Khong tai duoc danh sach Part: {partsError}</div>}
+      <div className="layout">
+        <div className="part-list-panel">
+          <div className="part-list-title">Chon Part</div>
+          <div className="part-list">
+            {parts.length === 0 && !partsError && (
+              <div className="part-list-empty">Dang tai...</div>
+            )}
+            {parts.map((p) => (
+              <label className="part-list-item" key={p.code}>
+                <input
+                  type="checkbox"
+                  checked={selectedPart === p.code}
+                  onChange={() => togglePart(p.code)}
+                />
+                <span>
+                  {p.label}
+                  {p.client ? ` (${p.client})` : ""}
+                </span>
+              </label>
+            ))}
+          </div>
+          {partsError && (
+            <div className="error small">Khong tai duoc danh sach Part: {partsError}</div>
+          )}
+        </div>
 
-      <textarea
-        value={snText}
-        onChange={(e) => setSnText(e.target.value)}
-        placeholder={"VN-GEE-P280027B-262239\nVN-GEE-P3X00545-262503"}
-      />
-
-      <div className="actions">
-        <button className="primary" disabled={loading} onClick={() => runCheck(false)}>
-          {loading ? "Dang kiem tra..." : "Kiem tra"}
-        </button>
-        <button className="secondary" disabled={loading} onClick={() => runCheck(true)}>
-          Lam moi du lieu &amp; kiem tra
-        </button>
-        {data?.dataAsOf && (
-          <span className="meta">
-            Du lieu luc: {new Date(data.dataAsOf).toLocaleString("vi-VN")}
-          </span>
-        )}
-      </div>
-
-      {error && <div className="error">{error}</div>}
-
-      {data?.results?.map((r, idx) => (
-        <div className="card" key={r.assySn + idx}>
-          <div className="card-header">
-            <span>Bearing Set S/N: {r.assySn}</span>
-            <StatusBadge overallOk={r.overallOk} found={r.found} />
+        <div className="main-content">
+          <div className="suffix-row">
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="6-8 so cuoi cua S/N"
+              value={suffix}
+              onChange={(e) => setSuffix(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") runCheck(false);
+              }}
+            />
+            <button
+              className="secondary"
+              onClick={addPartQuery}
+              disabled={!selectedPart || !suffix.trim()}
+            >
+              Them vao danh sach
+            </button>
           </div>
 
-          {r.resolvedAssySn && (
-            <div className="resolved-note">
-              Da tu khop voi: <strong>{r.resolvedAssySn}</strong>
-            </div>
-          )}
+          <textarea
+            value={snText}
+            onChange={(e) => setSnText(e.target.value)}
+            placeholder={"VN-GEE-P280027B-262239\nVN-GEE-P3X00545-262503"}
+          />
 
-          {!r.found && !r.ambiguous && (
-            <div className="not-found">
-              Khong tim thay S/N nay trong file &quot;Check SN ring from SN bearing set&quot;.
-              Kiem tra lai so doc tu tag.
-            </div>
-          )}
+          <div className="actions">
+            <button className="primary" disabled={loading} onClick={() => runCheck(false)}>
+              {loading ? "Dang kiem tra..." : "Kiem tra"}
+            </button>
+            <button className="secondary" disabled={loading} onClick={() => runCheck(true)}>
+              Lam moi du lieu &amp; kiem tra
+            </button>
+            {data?.dataAsOf && (
+              <span className="meta">
+                Du lieu luc: {new Date(data.dataAsOf).toLocaleString("vi-VN")}
+              </span>
+            )}
+          </div>
 
-          {r.ambiguous && (
-            <div className="ambiguous">
-              <div>
-                Nhap thieu qua nen trung {r.candidates.length} bearing set khac nhau -
-                bam chon dung so, hoac nhap day du hon:
+          {error && <div className="error">{error}</div>}
+
+          {data?.results?.map((r, idx) => (
+            <div className="card" key={r.assySn + idx}>
+              <div className="card-header">
+                <span>Bearing Set S/N: {r.assySn}</span>
+                <StatusBadge overallOk={r.overallOk} found={r.found} />
               </div>
-              <ul>
-                {r.candidates.map((c) => (
-                  <li key={c}>
-                    <button className="candidate" onClick={() => pickCandidate(c)}>
-                      {c}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
-          {r.rings?.map((ring) => (
-            <div
-              className={"ring-row" + (isBadStatus(ring.status) ? " ring-row-bad" : "")}
-              key={ring.ringSn}
-            >
-              <div className="ring-top">
-                <span>
-                  {isBadStatus(ring.status) && <span className="warn-icon">⚠</span>}
-                  [{ring.label}] {ring.ringSn}
-                </span>
-                <span>{ringMarkText(ring.status)}</span>
-              </div>
-              {ring.record && (
-                <div className="ring-detail">
-                  <div>Issue No.: {String(ring.record.issueNo ?? "-")}</div>
-                  <div>Product name: {String(ring.record.productName ?? "-")}</div>
-                  <div>Defect description: {String(ring.record.defectDescription ?? "-")}</div>
-                  <div>Processing Results: {String(ring.record.processingResults ?? "-")}</div>
-                  <div>
-                    Closing Date:{" "}
-                    {ring.record.closingDate ? String(ring.record.closingDate) : "-"}
-                  </div>
+              {r.resolvedAssySn && (
+                <div className="resolved-note">
+                  Da tu khop voi: <strong>{r.resolvedAssySn}</strong>
                 </div>
               )}
+
+              {!r.found && !r.ambiguous && (
+                <div className="not-found">
+                  Khong tim thay S/N nay trong file &quot;Check SN ring from SN bearing set&quot;.
+                  Kiem tra lai so doc tu tag.
+                </div>
+              )}
+
+              {r.ambiguous && (
+                <div className="ambiguous">
+                  <div>
+                    Nhap thieu qua nen trung {r.candidates.length} bearing set khac nhau -
+                    bam chon dung so, hoac nhap day du hon:
+                  </div>
+                  <ul>
+                    {r.candidates.map((c) => (
+                      <li key={c}>
+                        <button className="candidate" onClick={() => pickCandidate(c)}>
+                          {c}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {r.rings?.map((ring) => (
+                <div
+                  className={"ring-row" + (isBadStatus(ring.status) ? " ring-row-bad" : "")}
+                  key={ring.ringSn}
+                >
+                  <div className="ring-top">
+                    <span>
+                      {isBadStatus(ring.status) && <span className="warn-icon">⚠</span>}
+                      [{ring.label}] {ring.ringSn}
+                    </span>
+                    <span>{ringMarkText(ring.status)}</span>
+                  </div>
+                  {ring.record && (
+                    <div className="ring-detail">
+                      <div>Issue No.: {String(ring.record.issueNo ?? "-")}</div>
+                      <div>Product name: {String(ring.record.productName ?? "-")}</div>
+                      <div>Defect description: {String(ring.record.defectDescription ?? "-")}</div>
+                      <div>Processing Results: {String(ring.record.processingResults ?? "-")}</div>
+                      <div>
+                        Closing Date:{" "}
+                        {ring.record.closingDate ? String(ring.record.closingDate) : "-"}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }

@@ -18,7 +18,7 @@ body {
 }
 
 .container {
-  max-width: 720px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 24px 16px 64px;
 }
@@ -32,6 +32,84 @@ h1 {
   color: var(--gray);
   font-size: 14px;
   margin-bottom: 20px;
+}
+
+.layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.part-list-panel {
+  width: 260px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  overflow: hidden;
+}
+
+.part-list-title {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  background: #fafafa;
+}
+
+.part-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.part-list-empty {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--gray);
+}
+
+.part-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 14px;
+  border-bottom: 1px solid #f2f2f2;
+  cursor: pointer;
+}
+
+.part-list-item:last-child {
+  border-bottom: none;
+}
+
+.part-list-item:hover {
+  background: #fafafa;
+}
+
+.part-list-item input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.suffix-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.suffix-row input {
+  flex: 1;
+  min-width: 140px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
 }
 
 textarea {
@@ -214,34 +292,22 @@ button.candidate:hover {
   background: #f5f5f5;
 }
 
-.part-picker {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.part-picker select {
-  flex: 2;
-  min-width: 200px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 15px;
-  background: white;
-}
-
-.part-picker input {
-  flex: 1;
-  min-width: 120px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 15px;
-}
-
 .error.small {
   font-size: 12px;
   padding: 8px 12px;
   margin-bottom: 10px;
+}
+
+@media (max-width: 640px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .part-list-panel {
+    width: 100%;
+  }
+
+  .part-list {
+    max-height: 220px;
+  }
 }
