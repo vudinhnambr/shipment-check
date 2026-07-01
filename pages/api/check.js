@@ -9,7 +9,7 @@ function parseSnList(raw) {
     .filter(Boolean);
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     const raw = req.method === "POST" ? req.body?.sn : req.query.sn;
     const refresh = req.query.refresh === "1" || req.body?.refresh === true;
