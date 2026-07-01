@@ -45,18 +45,36 @@ export default function Home() {
       .catch((e) => setPartsError(e.message));
   }, []);
 
-  // Builds the final text to search: whatever is already in the textarea, PLUS
-  // the current Part + suffix box (if both filled in) - so the inspector does not
-  // have to remember to click "Them vao danh sach" before "Kiem tra" works. Also
-  // updates the textarea + clears the suffix box so it's clear what was searched.
+  // A "bare fragment" is a short line with no dashes and no "*" already in it -
+  // i.e. it looks like just the last few digits of an S/N, not a full S/N (which
+  // always contains dashes, e.g. "VN-GEE-P280027B-262239"). If a Part is ticked,
+  // any bare fragment - whether typed in the dedicated suffix box OR directly into
+  // the main textarea - gets scoped to that part automatically.
+  function isBareFragment(line) {
+    return !line.includes("*") && !line.includes("-") && line.length <= 10;
+  }
+
+  // Builds the final text to search: every line already in the textarea (with bare
+  // fragments auto-scoped to the ticked Part, if any), PLUS the current suffix box
+  // content (if filled in) - so the inspector does not have to remember which box
+  // to type numbers into, or click "Them vao danh sach" before "Kiem tra" works.
   function buildQueryText() {
-    let text = snText.trim();
+    let lines = snText
+      .split(/\n+/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (selectedPart) {
+      lines = lines.map((l) => (isBareFragment(l) ? `${selectedPart}*${l}` : l));
+    }
+
     if (selectedPart && suffix.trim()) {
-      const line = `${selectedPart}*${suffix.trim()}`;
-      text = text ? text + "\n" + line : line;
-      setSnText(text);
+      lines.push(`${selectedPart}*${suffix.trim()}`);
       setSuffix("");
     }
+
+    const text = lines.join("\n");
+    setSnText(text);
     return text;
   }
 
