@@ -161,3 +161,87 @@ button:disabled {
   color: var(--red);
   font-size: 14px;
 }
+
+.ring-row-bad {
+  background: #fdecea;
+  border-left: 4px solid var(--red);
+  padding-left: 12px;
+}
+
+.ring-row-bad .ring-top {
+  color: var(--red);
+}
+
+.warn-icon {
+  margin-right: 4px;
+}
+
+.resolved-note {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--gray);
+  border-top: 1px solid var(--border);
+  background: #fafafa;
+}
+
+.ambiguous {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.ambiguous ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+button.candidate {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button.candidate:hover {
+  background: #f5f5f5;
+}
+
+.part-picker {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.part-picker select {
+  flex: 2;
+  min-width: 200px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  background: white;
+}
+
+.part-picker input {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.error.small {
+  font-size: 12px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}

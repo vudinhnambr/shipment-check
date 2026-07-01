@@ -85,16 +85,23 @@ trình duyệt/tab để biết đó là file nào, rồi gán đúng:
 
 - Link mở ra file có tên chứa "Check SN ring..." -> copy File ID -> dán vào DRIVE_SN_FILE_ID
 - Link mở ra file có tên chứa "Inspection Notice..." / "NCR-SR Tracking" -> copy File ID -> dán vào DRIVE_NCR_FILE_ID
+- Link mở ra file "Standard Part Name" -> copy File ID -> dán vào DRIVE_PARTS_FILE_ID
+  (file này cấp dữ liệu cho dropdown "Chọn Part" - nếu bỏ trống, dropdown sẽ rỗng
+  nhưng app vẫn chạy bình thường với cách gõ S/N như cũ)
+
+Nhớ Share cả file "Standard Part Name" với email service account (như bước 4) nếu
+muốn dùng dropdown Part.
 
 ## 6. Deploy lên Vercel
 
 1. Vào https://vercel.com/ - đăng nhập bằng GitHub.
 2. Add New -> Project -> chọn repo vừa push.
-3. Ở phần Environment Variables, thêm đủ 4 biến (xem file .env.example):
+3. Ở phần Environment Variables, thêm đủ 5 biến (xem file .env.example):
    - GOOGLE_SERVICE_ACCOUNT_KEY_B64 (chuỗi base64 từ bước 3 - dán y nguyên, không
      thêm dấu ngoặc kép, không tự xuống dòng)
    - DRIVE_SN_FILE_ID
    - DRIVE_NCR_FILE_ID
+   - DRIVE_PARTS_FILE_ID (không bắt buộc)
    - CACHE_TTL_SECONDS (không bắt buộc, mặc định 300 = làm mới dữ liệu mỗi 5 phút)
 4. Bấm Deploy. Sau ~1-2 phút, Vercel cấp cho bạn 1 địa chỉ web - mở được từ điện
    thoại/máy tính bất kỳ.
@@ -125,8 +132,14 @@ node scripts/test-lookup.js "duong-dan/Check SN ring from SN bearing set.xlsx" \
 ## 8. Cách dùng khi đã deploy
 
 - Mở trang web trên điện thoại/máy tính.
-- Đọc số S/N của Bearing Set trên tag (mục "S/N:" trên bảng kim loại), gõ hoặc paste
-  vào ô, mỗi bearing set một dòng nếu kiểm tra nhiều cái cùng lúc.
+- Cách 1 (gõ tay đầy đủ): đọc số S/N của Bearing Set trên tag (mục "S/N:" trên bảng
+  kim loại), gõ hoặc paste vào ô, mỗi bearing set một dòng nếu kiểm tra nhiều cái
+  cùng lúc.
+- Cách 2 (dùng dropdown Part): chọn đúng Part ở dropdown, gõ 6-8 số cuối của S/N vào
+  ô bên cạnh, bấm "Thêm vào danh sách" - dòng ghép sẵn sẽ tự thêm vào ô nhập. Cách
+  này không cần nhớ/gõ hết dãy S/N dài. Nếu số bạn gõ chỉ khớp đúng 1 bearing set,
+  app tự nhận; nếu bạn gõ thiếu và khớp nhiều cái, app sẽ chưa tự chọn (do dropdown
+  đã giới hạn theo đúng Part nên hiếm khi xảy ra).
 - Bấm Kiểm tra. App hiện từng ring, trạng thái Processing Results, và kết luận
   OK / CHƯA OK cho từng bearing set.
 - Nút Làm mới dữ liệu & kiểm tra buộc app tải lại 2 file mới nhất từ Drive ngay
