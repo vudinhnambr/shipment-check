@@ -209,13 +209,33 @@ button:disabled {
 
 .ring-detail {
   margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fafafa;
   color: #333;
   font-size: 13px;
   line-height: 1.5;
 }
 
+.ring-detail + .ring-detail {
+  margin-top: 8px;
+}
+
 .ring-detail div {
   margin-bottom: 2px;
+}
+
+.ring-detail-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ring-detail-bad {
+  background: #fdecea;
+}
+
+.ring-detail-bad .ring-detail-title {
+  color: var(--red);
 }
 
 .not-found {

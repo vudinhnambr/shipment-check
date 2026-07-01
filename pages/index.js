@@ -7,17 +7,25 @@ function StatusBadge({ overallOk, found }) {
   return <span className="badge unknown">?</span>;
 }
 
-function ringMarkText(status) {
+function recordMarkText(status) {
   switch (status) {
-    case "NO_RECORD":
-      return "OK (khong co non-conformity)";
     case "CLOSED":
-      return "OK (Closed)";
+      return "OK (Closed / Use as Is)";
     case "OPEN_REVIEW":
       return "CAN XEM XET (chua Closed)";
     default:
       return "Khong ro trang thai";
   }
+}
+
+function ringSummaryText(ring) {
+  const total = ring.records?.length || 0;
+  if (ring.status === "NO_RECORD") return "OK (khong co non-conformity)";
+  if (ring.status === "CLOSED") {
+    return total > 1 ? `OK - ca ${total} notice deu Closed/Use as Is` : "OK (Closed / Use as Is)";
+  }
+  const openCount = (ring.records || []).filter((r) => r.status !== "CLOSED").length;
+  return `CAN XEM XET - ${openCount}/${total} notice chua Closed`;
 }
 
 function isBadStatus(status) {
@@ -211,20 +219,28 @@ export default function Home() {
                       {isBadStatus(ring.status) && <span className="warn-icon">⚠</span>}
                       [{ring.label}] {ring.ringSn}
                     </span>
-                    <span>{ringMarkText(ring.status)}</span>
+                    <span>{ringSummaryText(ring)}</span>
                   </div>
-                  {ring.record && (
-                    <div className="ring-detail">
-                      <div>Issue No.: {String(ring.record.issueNo ?? "-")}</div>
-                      <div>Product name: {String(ring.record.productName ?? "-")}</div>
-                      <div>Defect description: {String(ring.record.defectDescription ?? "-")}</div>
-                      <div>Processing Results: {String(ring.record.processingResults ?? "-")}</div>
+                  {ring.records?.map((record, rIdx) => (
+                    <div
+                      className={
+                        "ring-detail" + (record.status !== "CLOSED" ? " ring-detail-bad" : "")
+                      }
+                      key={record.issueNo ? String(record.issueNo) : rIdx}
+                    >
+                      <div className="ring-detail-title">
+                        Notice {rIdx + 1}/{ring.records.length}: {recordMarkText(record.status)}
+                      </div>
+                      <div>Issue No.: {String(record.issueNo ?? "-")}</div>
+                      <div>Product name: {String(record.productName ?? "-")}</div>
+                      <div>Defect description: {String(record.defectDescription ?? "-")}</div>
+                      <div>Processing Results: {String(record.processingResults ?? "-")}</div>
                       <div>
                         Closing Date:{" "}
-                        {ring.record.closingDate ? String(ring.record.closingDate) : "-"}
+                        {record.closingDate ? String(record.closingDate) : "-"}
                       </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
