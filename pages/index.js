@@ -7,42 +7,43 @@ import { useEffect, useMemo, useState } from "react";
 const STRINGS = {
   vi: {
     appName: "NCR Ring Check",
-    title: "Kiem tra NCR ring le truoc khi xuat hang",
+    title: "Kiểm tra NCR ring lẻ trước khi xuất hàng",
     subtitle:
-      "Nhap S/N cua Bearing Set (doc tu Tag Name), moi so mot dong. Hoac tick chon Part ben trai, roi chi can go 6-8 so cuoi cua S/N - khong can nho ma dai.",
-    partPanelTitle: "Chon Part",
-    partLoading: "Dang tai...",
-    partLoadError: "Khong tai duoc danh sach Part: ",
+      "Nhập S/N của Bearing Set (đọc từ Tag Name), mỗi số một dòng. Hoặc tick chọn Part bên trái, rồi chỉ cần gõ 6-8 số cuối của S/N - không cần nhớ mã dài.",
+    partPanelTitle: "Chọn Part",
+    partLoading: "Đang tải...",
+    partLoadError: "Không tải được danh sách Part: ",
     snPlaceholder: "VN-GEE-P280027B-262239\nVN-GEE-P3X00545-262503",
-    checkButton: "Kiem tra",
-    checking: "Dang kiem tra...",
-    refreshButton: "Lam moi du lieu & kiem tra",
-    dataAsOf: "Du lieu luc: ",
-    missingSn: "Chua nhap S/N nao - go vao o ben duoi (co the chon Part truoc de go it so hon).",
-    unknownError: "Loi khong xac dinh",
+    checkButton: "Kiểm tra",
+    checking: "Đang kiểm tra...",
+    refreshButton: "Làm mới dữ liệu & kiểm tra",
+    resetButton: "Xóa / Nhập lại",
+    dataAsOf: "Dữ liệu lúc: ",
+    missingSn: "Chưa nhập S/N nào - gõ vào ô bên dưới (có thể chọn Part trước để gõ ít số hơn).",
+    unknownError: "Lỗi không xác định",
     foundLabelPrefix: "Bearing Set S/N: ",
-    statusOk: "OK - CO THE XUAT",
-    statusBad: "CHUA OK",
-    statusNotFound: "KHONG TIM THAY",
+    statusOk: "OK - CÓ THỂ XUẤT",
+    statusBad: "CHƯA OK",
+    statusNotFound: "KHÔNG TÌM THẤY",
     statusUnknown: "?",
-    resolvedNote: "Da tu khop voi: ",
+    resolvedNote: "Đã tự khớp với: ",
     notFoundText:
-      'Khong tim thay S/N nay trong file "Check SN ring from SN bearing set". Kiem tra lai so doc tu tag.',
+      'Không tìm thấy S/N này trong file "Check SN ring from SN bearing set". Kiểm tra lại số đọc từ tag.',
     ambiguousText: (n) =>
-      `Nhap thieu qua nen trung ${n} bearing set khac nhau - bam chon dung so, hoac nhap day du hon:`,
-    okNoIssue: "OK (khong co non-conformity)",
+      `Nhập thiếu quá nên trùng ${n} bearing set khác nhau - bấm chọn đúng số, hoặc nhập đầy đủ hơn:`,
+    okNoIssue: "OK (không có non-conformity)",
     okClosedSingle: "OK (Closed / Use as Is)",
-    okClosedMulti: (n) => `OK - ca ${n} notice deu Closed/Use as Is`,
-    needReview: (open, total) => `CAN XEM XET - ${open}/${total} notice chua Closed`,
+    okClosedMulti: (n) => `OK - cả ${n} notice đều Closed/Use as Is`,
+    needReview: (open, total) => `CẦN XEM XÉT - ${open}/${total} notice chưa Closed`,
     noticeTitle: (i, n) => `Notice ${i}/${n}: `,
     recordOk: "OK (Closed / Use as Is)",
-    recordReview: "CAN XEM XET (chua Closed)",
-    recordUnknown: "Khong ro trang thai",
+    recordReview: "CẦN XEM XÉT (chưa Closed)",
+    recordUnknown: "Không rõ trạng thái",
     issueNo: "Issue No.: ",
-    productName: "Product name: ",
-    defectDescription: "Defect description: ",
-    processingResults: "Processing Results: ",
-    closingDate: "Closing Date: ",
+    productName: "Tên sản phẩm: ",
+    defectDescription: "Mô tả lỗi: ",
+    processingResults: "Kết quả xử lý: ",
+    closingDate: "Ngày đóng: ",
   },
   en: {
     appName: "NCR Ring Check",
@@ -56,6 +57,7 @@ const STRINGS = {
     checkButton: "Check",
     checking: "Checking...",
     refreshButton: "Refresh data & check",
+    resetButton: "Clear / Reset",
     dataAsOf: "Data as of: ",
     missingSn: "No S/N entered - type into the box below (you can tick a Part first to type fewer digits).",
     unknownError: "Unknown error",
@@ -115,6 +117,14 @@ function ringSummaryText(ring, STR) {
 
 function isBadStatus(status) {
   return status === "OPEN_REVIEW" || status === "UNKNOWN";
+}
+
+// Header row highlight class for the top status line of each result card:
+// green when the whole bearing set is OK, red when it is not.
+function headerHighlightClass(overallOk) {
+  if (overallOk === true) return " header-ok";
+  if (overallOk === false) return " header-bad";
+  return "";
 }
 
 // A "bare fragment" is a short line with no dashes and no "*" already in it -
@@ -199,6 +209,12 @@ export default function Home() {
 
   function togglePart(code) {
     setSelectedPart((prev) => (prev === code ? "" : code));
+  }
+
+  function resetInput() {
+    setSnText("");
+    setData(null);
+    setError(null);
   }
 
   const dataAsOfText = useMemo(() => {
@@ -286,6 +302,9 @@ export default function Home() {
                 <button className="secondary" disabled={loading} onClick={() => runCheck(true)}>
                   {STR.refreshButton}
                 </button>
+                <button className="secondary" disabled={loading} onClick={resetInput}>
+                  {STR.resetButton}
+                </button>
                 {dataAsOfText && (
                   <span className="meta">
                     {STR.dataAsOf}
@@ -300,7 +319,7 @@ export default function Home() {
             {data?.results?.map((r, resultIdx) => {
               return (
                 <div className="card" key={r.assySn + resultIdx}>
-                  <div className="card-header">
+                  <div className={"card-header" + headerHighlightClass(r.overallOk)}>
                     <span>
                       {STR.foundLabelPrefix}
                       {r.assySn}

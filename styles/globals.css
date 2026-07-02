@@ -307,6 +307,17 @@ button:disabled {
   border-bottom: 1px solid var(--border);
 }
 
+/* Whole-row highlight for the overall shipment status of a bearing set. */
+.card-header.header-ok {
+  background: var(--green-soft);
+  border-bottom-color: #bfe6cf;
+}
+
+.card-header.header-bad {
+  background: var(--red-soft);
+  border-bottom-color: #f3c9c5;
+}
+
 .badge {
   font-size: 12px;
   font-weight: 700;
