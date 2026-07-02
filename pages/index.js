@@ -1,38 +1,135 @@
-import { useEffect, useState } from "react";
+import Head from "next/head";
+import { useEffect, useMemo, useState } from "react";
 
-function StatusBadge({ overallOk, found }) {
-  if (!found) return <span className="badge unknown">KHONG TIM THAY</span>;
-  if (overallOk === true) return <span className="badge ok">OK - CO THE XUAT</span>;
-  if (overallOk === false) return <span className="badge bad">CHUA OK</span>;
-  return <span className="badge unknown">?</span>;
+// ---------------------------------------------------------------------------
+// i18n - all user-facing text lives here so the EN/VN toggle just swaps STR.
+// ---------------------------------------------------------------------------
+const STRINGS = {
+  vi: {
+    appName: "NCR Ring Check",
+    title: "Kiem tra NCR ring le truoc khi xuat hang",
+    subtitle:
+      "Nhap S/N cua Bearing Set (doc tu Tag Name), moi so mot dong. Hoac tick chon Part ben trai, roi chi can go 6-8 so cuoi cua S/N - khong can nho ma dai.",
+    partPanelTitle: "Chon Part",
+    partLoading: "Dang tai...",
+    partLoadError: "Khong tai duoc danh sach Part: ",
+    snPlaceholder: "VN-GEE-P280027B-262239\nVN-GEE-P3X00545-262503",
+    checkButton: "Kiem tra",
+    checking: "Dang kiem tra...",
+    refreshButton: "Lam moi du lieu & kiem tra",
+    dataAsOf: "Du lieu luc: ",
+    missingSn: "Chua nhap S/N nao - go vao o ben duoi (co the chon Part truoc de go it so hon).",
+    unknownError: "Loi khong xac dinh",
+    foundLabelPrefix: "Bearing Set S/N: ",
+    statusOk: "OK - CO THE XUAT",
+    statusBad: "CHUA OK",
+    statusNotFound: "KHONG TIM THAY",
+    statusUnknown: "?",
+    resolvedNote: "Da tu khop voi: ",
+    notFoundText:
+      'Khong tim thay S/N nay trong file "Check SN ring from SN bearing set". Kiem tra lai so doc tu tag.',
+    ambiguousText: (n) =>
+      `Nhap thieu qua nen trung ${n} bearing set khac nhau - bam chon dung so, hoac nhap day du hon:`,
+    okNoIssue: "OK (khong co non-conformity)",
+    okClosedSingle: "OK (Closed / Use as Is)",
+    okClosedMulti: (n) => `OK - ca ${n} notice deu Closed/Use as Is`,
+    needReview: (open, total) => `CAN XEM XET - ${open}/${total} notice chua Closed`,
+    noticeTitle: (i, n) => `Notice ${i}/${n}: `,
+    recordOk: "OK (Closed / Use as Is)",
+    recordReview: "CAN XEM XET (chua Closed)",
+    recordUnknown: "Khong ro trang thai",
+    issueNo: "Issue No.: ",
+    productName: "Product name: ",
+    defectDescription: "Defect description: ",
+    processingResults: "Processing Results: ",
+    closingDate: "Closing Date: ",
+  },
+  en: {
+    appName: "NCR Ring Check",
+    title: "Check ring NCR status before shipment",
+    subtitle:
+      "Enter the Bearing Set S/N (from the Tag Name), one per line. Or tick a Part on the left, then just type the last 6-8 digits of the S/N - no need to remember the full code.",
+    partPanelTitle: "Select Part",
+    partLoading: "Loading...",
+    partLoadError: "Could not load Part list: ",
+    snPlaceholder: "VN-GEE-P280027B-262239\nVN-GEE-P3X00545-262503",
+    checkButton: "Check",
+    checking: "Checking...",
+    refreshButton: "Refresh data & check",
+    dataAsOf: "Data as of: ",
+    missingSn: "No S/N entered - type into the box below (you can tick a Part first to type fewer digits).",
+    unknownError: "Unknown error",
+    foundLabelPrefix: "Bearing Set S/N: ",
+    statusOk: "OK - READY TO SHIP",
+    statusBad: "NOT OK",
+    statusNotFound: "NOT FOUND",
+    statusUnknown: "?",
+    resolvedNote: "Auto-matched to: ",
+    notFoundText:
+      'This S/N was not found in "Check SN ring from SN bearing set". Double-check the number read from the tag.',
+    ambiguousText: (n) =>
+      `Too short - matches ${n} different bearing sets. Click to pick the right one, or type a longer S/N:`,
+    okNoIssue: "OK (no non-conformity)",
+    okClosedSingle: "OK (Closed / Use as Is)",
+    okClosedMulti: (n) => `OK - all ${n} notices are Closed/Use as Is`,
+    needReview: (open, total) => `NEEDS REVIEW - ${open}/${total} notice(s) not Closed`,
+    noticeTitle: (i, n) => `Notice ${i}/${n}: `,
+    recordOk: "OK (Closed / Use as Is)",
+    recordReview: "NEEDS REVIEW (not Closed)",
+    recordUnknown: "Status unknown",
+    issueNo: "Issue No.: ",
+    productName: "Product name: ",
+    defectDescription: "Defect description: ",
+    processingResults: "Processing Results: ",
+    closingDate: "Closing Date: ",
+  },
+};
+
+function StatusBadge({ overallOk, found, STR }) {
+  if (!found) return <span className="badge unknown">{STR.statusNotFound}</span>;
+  if (overallOk === true) return <span className="badge ok">{STR.statusOk}</span>;
+  if (overallOk === false) return <span className="badge bad">{STR.statusBad}</span>;
+  return <span className="badge unknown">{STR.statusUnknown}</span>;
 }
 
-function recordMarkText(status) {
+function recordMarkText(status, STR) {
   switch (status) {
     case "CLOSED":
-      return "OK (Closed / Use as Is)";
+      return STR.recordOk;
     case "OPEN_REVIEW":
-      return "CAN XEM XET (chua Closed)";
+      return STR.recordReview;
     default:
-      return "Khong ro trang thai";
+      return STR.recordUnknown;
   }
 }
 
-function ringSummaryText(ring) {
+function ringSummaryText(ring, STR) {
   const total = ring.records?.length || 0;
-  if (ring.status === "NO_RECORD") return "OK (khong co non-conformity)";
+  if (ring.status === "NO_RECORD") return STR.okNoIssue;
   if (ring.status === "CLOSED") {
-    return total > 1 ? `OK - ca ${total} notice deu Closed/Use as Is` : "OK (Closed / Use as Is)";
+    return total > 1 ? STR.okClosedMulti(total) : STR.okClosedSingle;
   }
   const openCount = (ring.records || []).filter((r) => r.status !== "CLOSED").length;
-  return `CAN XEM XET - ${openCount}/${total} notice chua Closed`;
+  return STR.needReview(openCount, total);
 }
 
 function isBadStatus(status) {
   return status === "OPEN_REVIEW" || status === "UNKNOWN";
 }
 
+// A "bare fragment" is a short line with no dashes and no "*" already in it -
+// i.e. it looks like just the last few digits of an S/N, not a full S/N (which
+// always contains dashes, e.g. "VN-GEE-P280027B-262239"). If a Part is ticked,
+// any bare fragment typed into the textarea gets scoped to that part
+// automatically - no separate "add" step needed.
+function isBareFragment(value) {
+  return !value.includes("*") && !value.includes("-") && value.length <= 10;
+}
+
 export default function Home() {
+  const [lang, setLang] = useState("vi");
+  const STR = STRINGS[lang];
+
   const [snText, setSnText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -51,15 +148,6 @@ export default function Home() {
       })
       .catch((e) => setPartsError(e.message));
   }, []);
-
-  // A "bare fragment" is a short line with no dashes and no "*" already in it -
-  // i.e. it looks like just the last few digits of an S/N, not a full S/N (which
-  // always contains dashes, e.g. "VN-GEE-P280027B-262239"). If a Part is ticked,
-  // any bare fragment typed into the textarea gets scoped to that part
-  // automatically - no separate "add" step needed.
-  function isBareFragment(line) {
-    return !line.includes("*") && !line.includes("-") && line.length <= 10;
-  }
 
   // Builds the final text to search: every line in the textarea, with bare
   // fragments auto-scoped to the ticked Part (if any).
@@ -81,7 +169,7 @@ export default function Home() {
   async function runCheck(refresh = false) {
     const text = buildQueryText();
     if (!text) {
-      setError("Chua nhap S/N nao - go vao o ben duoi (co the chon Part truoc de go it so hon).");
+      setError(STR.missingSn);
       return;
     }
     setLoading(true);
@@ -94,7 +182,7 @@ export default function Home() {
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json.error || "Loi khong xac dinh");
+        throw new Error(json.error || STR.unknownError);
       }
       setData(json);
     } catch (e) {
@@ -113,140 +201,195 @@ export default function Home() {
     setSelectedPart((prev) => (prev === code ? "" : code));
   }
 
+  const dataAsOfText = useMemo(() => {
+    if (!data?.dataAsOf) return null;
+    const locale = lang === "vi" ? "vi-VN" : "en-US";
+    return new Date(data.dataAsOf).toLocaleString(locale);
+  }, [data, lang]);
+
   return (
-    <div className="container">
-      <h1>Kiem tra NCR ring le truoc khi xuat hang</h1>
-      <p className="subtitle">
-        Nhap S/N cua Bearing Set (doc tu Tag Name), moi so mot dong. Hoac tick chon
-        Part ben trai, roi chi can go 6-8 so cuoi cua S/N vao o ben duoi - khong can
-        nho ma day.
-      </p>
-
-      <div className="layout">
-        <div className="part-list-panel">
-          <div className="part-list-title">Chon Part</div>
-          <div className="part-list">
-            {parts.length === 0 && !partsError && (
-              <div className="part-list-empty">Dang tai...</div>
-            )}
-            {parts.map((p) => (
-              <label className="part-list-item" key={p.code}>
-                <input
-                  type="checkbox"
-                  checked={selectedPart === p.code}
-                  onChange={() => togglePart(p.code)}
-                />
-                <span>
-                  {p.label}
-                  {p.client ? ` (${p.client})` : ""}
-                </span>
-              </label>
-            ))}
+    <>
+      <Head>
+        <title>{STR.title}</title>
+      </Head>
+      <div className="topbar">
+        <div className="topbar-inner">
+          <div className="brand">
+            <span className="brand-mark">NCR</span>
+            <span className="brand-name">{STR.appName}</span>
           </div>
-          {partsError && (
-            <div className="error small">Khong tai duoc danh sach Part: {partsError}</div>
-          )}
+          <div className="lang-toggle" role="group" aria-label="Language">
+            <button
+              type="button"
+              className={lang === "vi" ? "active" : ""}
+              onClick={() => setLang("vi")}
+            >
+              VN
+            </button>
+            <button
+              type="button"
+              className={lang === "en" ? "active" : ""}
+              onClick={() => setLang("en")}
+            >
+              EN
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div className="main-content">
-          <textarea
-            value={snText}
-            onChange={(e) => setSnText(e.target.value)}
-            placeholder={"VN-GEE-P280027B-262239\nVN-GEE-P3X00545-262503"}
-          />
+      <div className="container">
+        <h1>{STR.title}</h1>
+        <p className="subtitle">{STR.subtitle}</p>
 
-          <div className="actions">
-            <button className="primary" disabled={loading} onClick={() => runCheck(false)}>
-              {loading ? "Dang kiem tra..." : "Kiem tra"}
-            </button>
-            <button className="secondary" disabled={loading} onClick={() => runCheck(true)}>
-              Lam moi du lieu &amp; kiem tra
-            </button>
-            {data?.dataAsOf && (
-              <span className="meta">
-                Du lieu luc: {new Date(data.dataAsOf).toLocaleString("vi-VN")}
-              </span>
+        <div className="layout">
+          <div className="part-list-panel">
+            <div className="part-list-title">{STR.partPanelTitle}</div>
+            <div className="part-list">
+              {parts.length === 0 && !partsError && (
+                <div className="part-list-empty">{STR.partLoading}</div>
+              )}
+              {parts.map((p) => (
+                <label className="part-list-item" key={p.code}>
+                  <input
+                    type="radio"
+                    name="part-picker"
+                    checked={selectedPart === p.code}
+                    onChange={() => togglePart(p.code)}
+                  />
+                  <span>
+                    {p.label}
+                    {p.client ? ` (${p.client})` : ""}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {partsError && (
+              <div className="error small">
+                {STR.partLoadError}
+                {partsError}
+              </div>
             )}
           </div>
 
-          {error && <div className="error">{error}</div>}
+          <div className="main-content">
+            <div className="sn-input-card">
+              <textarea
+                value={snText}
+                onChange={(e) => setSnText(e.target.value)}
+                placeholder={STR.snPlaceholder}
+              />
 
-          {data?.results?.map((r, idx) => (
-            <div className="card" key={r.assySn + idx}>
-              <div className="card-header">
-                <span>Bearing Set S/N: {r.assySn}</span>
-                <StatusBadge overallOk={r.overallOk} found={r.found} />
+              <div className="actions">
+                <button className="primary" disabled={loading} onClick={() => runCheck(false)}>
+                  {loading ? STR.checking : STR.checkButton}
+                </button>
+                <button className="secondary" disabled={loading} onClick={() => runCheck(true)}>
+                  {STR.refreshButton}
+                </button>
+                {dataAsOfText && (
+                  <span className="meta">
+                    {STR.dataAsOf}
+                    {dataAsOfText}
+                  </span>
+                )}
               </div>
 
-              {r.resolvedAssySn && (
-                <div className="resolved-note">
-                  Da tu khop voi: <strong>{r.resolvedAssySn}</strong>
-                </div>
-              )}
+              {error && <div className="error">{error}</div>}
+            </div>
 
-              {!r.found && !r.ambiguous && (
-                <div className="not-found">
-                  Khong tim thay S/N nay trong file &quot;Check SN ring from SN bearing set&quot;.
-                  Kiem tra lai so doc tu tag.
-                </div>
-              )}
-
-              {r.ambiguous && (
-                <div className="ambiguous">
-                  <div>
-                    Nhap thieu qua nen trung {r.candidates.length} bearing set khac nhau -
-                    bam chon dung so, hoac nhap day du hon:
-                  </div>
-                  <ul>
-                    {r.candidates.map((c) => (
-                      <li key={c}>
-                        <button className="candidate" onClick={() => pickCandidate(c)}>
-                          {c}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {r.rings?.map((ring) => (
-                <div
-                  className={"ring-row" + (isBadStatus(ring.status) ? " ring-row-bad" : "")}
-                  key={ring.ringSn}
-                >
-                  <div className="ring-top">
+            {data?.results?.map((r, resultIdx) => {
+              return (
+                <div className="card" key={r.assySn + resultIdx}>
+                  <div className="card-header">
                     <span>
-                      {isBadStatus(ring.status) && <span className="warn-icon">⚠</span>}
-                      [{ring.label}] {ring.ringSn}
+                      {STR.foundLabelPrefix}
+                      {r.assySn}
                     </span>
-                    <span>{ringSummaryText(ring)}</span>
+                    <StatusBadge overallOk={r.overallOk} found={r.found} STR={STR} />
                   </div>
-                  {ring.records?.map((record, rIdx) => (
+
+                  {r.resolvedAssySn && (
+                    <div className="resolved-note">
+                      {STR.resolvedNote}
+                      <strong>{r.resolvedAssySn}</strong>
+                    </div>
+                  )}
+
+                  {!r.found && !r.ambiguous && (
+                    <div className="not-found">{STR.notFoundText}</div>
+                  )}
+
+                  {r.ambiguous && (
+                    <div className="ambiguous">
+                      <div>{STR.ambiguousText(r.candidates.length)}</div>
+                      <ul>
+                        {r.candidates.map((c) => (
+                          <li key={c}>
+                            <button
+                              className="candidate"
+                              onClick={() => pickCandidate(c)}
+                            >
+                              {c}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {r.rings?.map((ring) => (
                     <div
-                      className={
-                        "ring-detail" + (record.status !== "CLOSED" ? " ring-detail-bad" : "")
-                      }
-                      key={record.issueNo ? String(record.issueNo) : rIdx}
+                      className={"ring-row" + (isBadStatus(ring.status) ? " ring-row-bad" : "")}
+                      key={ring.ringSn}
                     >
-                      <div className="ring-detail-title">
-                        Notice {rIdx + 1}/{ring.records.length}: {recordMarkText(record.status)}
+                      <div className="ring-top">
+                        <span>
+                          {isBadStatus(ring.status) && <span className="warn-icon">!</span>}
+                          [{ring.label}] {ring.ringSn}
+                        </span>
+                        <span>{ringSummaryText(ring, STR)}</span>
                       </div>
-                      <div>Issue No.: {String(record.issueNo ?? "-")}</div>
-                      <div>Product name: {String(record.productName ?? "-")}</div>
-                      <div>Defect description: {String(record.defectDescription ?? "-")}</div>
-                      <div>Processing Results: {String(record.processingResults ?? "-")}</div>
-                      <div>
-                        Closing Date:{" "}
-                        {record.closingDate ? String(record.closingDate) : "-"}
-                      </div>
+                      {ring.records?.map((record, rIdx) => (
+                        <div
+                          className={
+                            "ring-detail" + (record.status !== "CLOSED" ? " ring-detail-bad" : "")
+                          }
+                          key={record.issueNo ? String(record.issueNo) : rIdx}
+                        >
+                          <div className="ring-detail-title">
+                            {STR.noticeTitle(rIdx + 1, ring.records.length)}
+                            {recordMarkText(record.status, STR)}
+                          </div>
+                          <div>
+                            {STR.issueNo}
+                            {String(record.issueNo ?? "-")}
+                          </div>
+                          <div>
+                            {STR.productName}
+                            {String(record.productName ?? "-")}
+                          </div>
+                          <div>
+                            {STR.defectDescription}
+                            {String(record.defectDescription ?? "-")}
+                          </div>
+                          <div>
+                            {STR.processingResults}
+                            {String(record.processingResults ?? "-")}
+                          </div>
+                          <div>
+                            {STR.closingDate}
+                            {record.closingDate ? String(record.closingDate) : "-"}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
-              ))}
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
